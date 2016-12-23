@@ -1,11 +1,13 @@
 import rpyc
 import uuid
 import threading 
+import math
+import random
 
 from rpyc.utils.server import ThreadedServer
 
 def set_conf():
-  MasterService.exposed_Master.block_size = 1024
+  MasterService.exposed_Master.block_size = 10
   MasterService.exposed_Master.replication_factor = 2
   MasterService.exposed_Master.minions = {"1":"localhost:8888","2":"localhost:9999"}
 
@@ -20,8 +22,8 @@ class MasterService(rpyc.Service):
     replication_factor = 0
 
     def exposed_read(self,fname):
-      f=file_table[fname]
-      pass
+      mapping = self.__class__.file_table[fname]
+      return mapping
       # return {"num_blk":3,
       #         "blk_meta":[
       #                       [(minion_loc,uuid),(minion_loc,uuid)],
@@ -30,17 +32,41 @@ class MasterService(rpyc.Service):
       #        }
 
 
-    def exposed_write(self):
-      pass
-      # exits()
-      # calc_num_blk()
-      # # coroutines for each block.
-      # for each block:
-      #   algo_find_minions()
-      #   put_entry     
+    def exposed_write(self,dest,size):
+      if self.exists(dest):
+        pass # ignoring for now, will delete it later
 
-    def exposed_put(self,val):
-      self.__class__.replication_factor = val
+      self.__class__.file_table[dest]=[]
+
+      num_blocks = self.calc_num_blocks(size)
+      blocks = self.alloc_blocks(dest,num_blocks)
+      return blocks
+
+    def exposed_get_file_table_entry(self,fname):
+      return self.__class__.file_table[fname]
+
+    def exposed_get_block_size(self):
+      return self.__class__.block_size
+
+    def exposed_get_minions(self):
+      return self.__class__.minions
+
+    def calc_num_blocks(self,size):
+      return int(math.ceil(float(size)/self.__class__.block_size))
+
+    def exists(self,file):
+      return file in self.__class__.file_table
+
+    def alloc_blocks(self,dest,num):
+      blocks = []
+      for i in range(0,num):
+        block_uuid = uuid.uuid1()
+        nodes_ids = random.sample(self.__class__.minions.keys(),self.__class__.replication_factor)
+        blocks.append((block_uuid,nodes_ids))
+
+        self.__class__.file_table[dest].append((block_uuid,nodes_ids))
+
+      return blocks
 
 
 if __name__ == "__main__":

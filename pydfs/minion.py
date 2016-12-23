@@ -3,26 +3,37 @@ import uuid
 
 from rpyc.utils.server import ThreadedServer
 
-def set_conf():
-  MasterService.exposed_Master.block_size = 1024
-  MasterService.exposed_Master.replication_factor = 2
-  MasterService.exposed_Master.minions = {"1":"localhost:8888","2":"localhost:9999"}
-
 
 class MinionService(rpyc.Service):
   class exposed_Minion():
     blocks = {}
 
-    def exposed_put(self):
-      pass
+    def exposed_put(self,block_uuid,data,minions):
+      with open('/tmp/minion/'+str(block_uuid),'w') as f:
+        f.write(data)
+      if len(minions)>0:
+        self.forward(block_uuid,data,minions)
+
 
     def exposed_get(self):
       pass   
  
-    def pass_on():
+    def forward(self,block_uuid,data,minions):
+      print "8888: forwaring to:"
+      print block_uuid, minions
+      minion=minions[0]
+      minions=minions[1:]
+      host,port=minion.split(":")
+
+      con=rpyc.connect(host,port=port)
+      minion = con.root.Minion()
+      minion.put(block_uuid,data,minions)
+
+    def delete_block(self,uuid):
       pass
 
 if __name__ == "__main__":
-  set_conf()
-  t = ThreadedServer(MasterService, port = 8888)
+  t = ThreadedServer(MinionService, port = 8888)
+  #tt = ThreadedServer(MinionService, port = 9999)
   t.start()
+  #tt.start()
