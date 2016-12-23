@@ -16,7 +16,7 @@ def send_to_minion(block_uuid,data,minions):
 def get(master,fname):
   file_table = master.get_file_table_entry(fname)
   for block in file_table:
-    
+    pass
 
 def put(master,source,dest):
   size = os.path.getsize(source)
