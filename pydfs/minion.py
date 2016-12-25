@@ -39,6 +39,6 @@ class MinionService(rpyc.Service):
       pass
 
 if __name__ == "__main__":
-  os.mkdir(DATA_DIR)
+  if not os.path.isdir(DATA_DIR): os.mkdir(DATA_DIR)
   t = ThreadedServer(MinionService, port = 8888)
   t.start()
