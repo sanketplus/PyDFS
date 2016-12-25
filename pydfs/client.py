@@ -13,10 +13,26 @@ def send_to_minion(block_uuid,data,minions):
   minion.put(block_uuid,data,minions)
 
 
+def read_from_minion(block_uuid,minion):
+  host,port = minion.split(":")
+  con=rpyc.connect(host,port=port)
+  minion = con.root.Minion()
+  return minion.get(block_uuid)
+
 def get(master,fname):
   file_table = master.get_file_table_entry(fname)
+  if not file_table:
+    print "404: file not found"
+    return
+
   for block in file_table:
-    pass
+    for m in [master.get_minions()[_] for _ in block[1]]:
+      data = read_from_minion(block[0],m)
+      if data:
+        sys.stdout.write(data)
+        break
+    else:
+        print "No blocks found. Possibly a corrupt file"
 
 def put(master,source,dest):
   size = os.path.getsize(source)

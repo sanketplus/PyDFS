@@ -24,13 +24,6 @@ class MasterService(rpyc.Service):
     def exposed_read(self,fname):
       mapping = self.__class__.file_table[fname]
       return mapping
-      # return {"num_blk":3,
-      #         "blk_meta":[
-      #                       [(minion_loc,uuid),(minion_loc,uuid)],
-      #                       [(minion_loc,uuid),(minion_loc,uuid)]
-      #                     ]
-      #        }
-
 
     def exposed_write(self,dest,size):
       if self.exists(dest):
@@ -43,7 +36,10 @@ class MasterService(rpyc.Service):
       return blocks
 
     def exposed_get_file_table_entry(self,fname):
-      return self.__class__.file_table[fname]
+      if fname in self.__class__.file_table:
+        return self.__class__.file_table[fname]
+      else:
+        return None
 
     def exposed_get_block_size(self):
       return self.__class__.block_size
