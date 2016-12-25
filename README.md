@@ -20,4 +20,6 @@ $ python client.py get sometxt
   3. Dump namespace periodically (maybe)
   4. Minion heartbeats / Block reports
   5. Add entry in namespace only after write succeeds.
-  6. Expand this TODO
+  6. Use proper datastructure(tree-like eg. treedict) to sotre
+     namespace(currently simple dict)
+  7. Expand this TODO
