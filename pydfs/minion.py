@@ -29,7 +29,7 @@ class MinionService(rpyc.Service):
       print block_uuid, minions
       minion=minions[0]
       minions=minions[1:]
-      host,port=minion.split(":")
+      host,port=minion
 
       con=rpyc.connect(host,port=port)
       minion = con.root.Minion()

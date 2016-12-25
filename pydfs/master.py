@@ -3,15 +3,22 @@ import uuid
 import threading 
 import math
 import random
+import ConfigParser
 
 from rpyc.utils.server import ThreadedServer
 
 def set_conf():
-  MasterService.exposed_Master.block_size = 10
-  MasterService.exposed_Master.replication_factor = 2
-  MasterService.exposed_Master.minions = {"1":"localhost:8888","2":"localhost:9999"}
+  conf=ConfigParser.ConfigParser()
+  conf.readfp(open('dfs.conf'))
+  MasterService.exposed_Master.block_size = int(conf.get('master','block_size'))
+  MasterService.exposed_Master.replication_factor = int(conf.get('master','replication_factor'))
+  minions = conf.get('master','minions').split(',')
+  #MasterService.exposed_Master.minions = {"1":("localhost",8888),"2":("localhost",9999)}
+  for m in minions:
+    id,host,port=m.split(":")
+    MasterService.exposed_Master.minions[id]=(host,port)
 
-
+  print MasterService.exposed_Master.block_size, MasterService.exposed_Master.replication_factor, MasterService.exposed_Master.minions
 class MasterService(rpyc.Service):
   class exposed_Master():
     file_table = {}

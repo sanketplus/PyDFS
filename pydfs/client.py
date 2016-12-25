@@ -6,7 +6,7 @@ def send_to_minion(block_uuid,data,minions):
   print "sending: " + str(block_uuid) + str(minions)
   minion=minions[0]
   minions=minions[1:]
-  host,port=minion.split(":")
+  host,port=minion
 
   con=rpyc.connect(host,port=port)
   minion = con.root.Minion()
@@ -14,7 +14,7 @@ def send_to_minion(block_uuid,data,minions):
 
 
 def read_from_minion(block_uuid,minion):
-  host,port = minion.split(":")
+  host,port = minion
   con=rpyc.connect(host,port=port)
   minion = con.root.Minion()
   return minion.get(block_uuid)
