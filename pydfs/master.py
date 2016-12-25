@@ -28,7 +28,6 @@ def set_conf():
   if os.path.isfile('fs.img'):
     MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping = pickle.load(open('fs.img','rb'))
 
-  print MasterService.exposed_Master.block_size, MasterService.exposed_Master.replication_factor, MasterService.exposed_Master.minions
 class MasterService(rpyc.Service):
   class exposed_Master():
     file_table = {}

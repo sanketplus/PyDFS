@@ -22,4 +22,5 @@ $ python client.py get sometxt
   5. Add entry in namespace only after write succeeds.
   6. Use proper datastructure(tree-like eg. treedict) to sotre
      namespace(currently simple dict)
-  7. Expand this TODO
+  7. Logging
+  8. Expand this TODO
