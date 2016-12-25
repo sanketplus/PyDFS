@@ -4,8 +4,16 @@ import threading
 import math
 import random
 import ConfigParser
+import signal
+import pickle
+import sys
+import os
 
 from rpyc.utils.server import ThreadedServer
+
+def int_handler(signal, frame):
+  pickle.dump((MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping),open('fs.img','wb'))
+  sys.exit(0)
 
 def set_conf():
   conf=ConfigParser.ConfigParser()
@@ -16,6 +24,9 @@ def set_conf():
   for m in minions:
     id,host,port=m.split(":")
     MasterService.exposed_Master.minions[id]=(host,port)
+
+  if os.path.isfile('fs.img'):
+    MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping = pickle.load(open('fs.img','rb'))
 
   print MasterService.exposed_Master.block_size, MasterService.exposed_Master.replication_factor, MasterService.exposed_Master.minions
 class MasterService(rpyc.Service):
@@ -73,5 +84,6 @@ class MasterService(rpyc.Service):
 
 if __name__ == "__main__":
   set_conf()
+  signal.signal(signal.SIGINT,int_handler)
   t = ThreadedServer(MasterService, port = 2131)
   t.start()
