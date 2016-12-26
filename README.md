@@ -7,7 +7,7 @@ Simple (~200 lines) distributed file system like HDFS (and of-course GFS). It co
 ### How to run.
   1. Edit `dfs.conf` for setting block size, replication factor and list minions (`minionid:host:port`)
   2. Fireup master and minions.
-  3. To sotre and retrive a file:
+  3. To store and retrive a file:
 ```sh
 $ python client.py put sourcefile.txt sometxt
 $ python client.py get sometxt
