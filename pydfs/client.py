@@ -1,9 +1,13 @@
 import rpyc
 import sys
 import os
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+LOG = logging.getLogger(__name__)
 
 def send_to_minion(block_uuid,data,minions):
-  print "sending: " + str(block_uuid) + str(minions)
+  LOG.info("sending: " + str(block_uuid) + str(minions))
   minion=minions[0]
   minions=minions[1:]
   host,port=minion
@@ -22,7 +26,7 @@ def read_from_minion(block_uuid,minion):
 def get(master,fname):
   file_table = master.get_file_table_entry(fname)
   if not file_table:
-    print "404: file not found"
+    LOG.info("404: file not found")
     return
 
   for block in file_table:
@@ -32,7 +36,7 @@ def get(master,fname):
         sys.stdout.write(data)
         break
     else:
-        print "No blocks found. Possibly a corrupt file"
+        LOG.info("No blocks found. Possibly a corrupt file")
 
 def put(master,source,dest):
   size = os.path.getsize(source)
@@ -54,7 +58,7 @@ def main(args):
   elif args[0] == "put":
     put(master,args[1],args[2])
   else:
-    print "try 'put srcFile destFile OR get file'"
+    LOG.error("try 'put srcFile destFile OR get file'")
 
 
 if __name__ == "__main__":
