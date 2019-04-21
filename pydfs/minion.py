@@ -1,44 +1,50 @@
 import rpyc
-import uuid
 import os
+import sys
+import logging
 
 from rpyc.utils.server import ThreadedServer
 
-DATA_DIR="/tmp/minion/"
-
-class MinionService(rpyc.Service):
-  class exposed_Minion():
-    blocks = {}
-
-    def exposed_put(self,block_uuid,data,minions):
-      with open(DATA_DIR+str(block_uuid),'w') as f:
-        f.write(data)
-      if len(minions)>0:
-        self.forward(block_uuid,data,minions)
+DATA_DIR = "/tmp/minion/"
+PORT = 8888
+logging.basicConfig(level=logging.DEBUG)
 
 
-    def exposed_get(self,block_uuid):
-      block_addr=DATA_DIR+str(block_uuid)
-      if not os.path.isfile(block_addr):
-        return None
-      with open(block_addr) as f:
-        return f.read()   
- 
-    def forward(self,block_uuid,data,minions):
-      print "8888: forwaring to:"
-      print block_uuid, minions
-      minion=minions[0]
-      minions=minions[1:]
-      host,port=minion
+class Minion(rpyc.Service):
 
-      con=rpyc.connect(host,port=port)
-      minion = con.root.Minion()
-      minion.put(block_uuid,data,minions)
+    def exposed_put(self, block_id, data, minions):
+        logging.debug(f"put block {block_id}")
+        out_path = os.path.join(DATA_DIR, block_id)
+        with open(out_path, 'w') as f:
+            f.write(data)
+        if len(minions) > 0:
+            self.forward(block_id, data, minions)
 
-    def delete_block(self,uuid):
-      pass
+    def exposed_get(self, block_id):
+        logging.debug(f"get block: {block_id}")
+        block_addr = os.path.join(DATA_DIR, block_id)
+        if not os.path.isfile(block_addr):
+            logging.debug("block not found")
+            return None
+        with open(block_addr) as f:
+            return f.read()
+
+    def forward(self, block_id, data, minions):
+        logging.debug(f"forwarding block: {block_id} to {minions}")
+        next_minion = minions[0]
+        minions = minions[1:]
+        host, port = next_minion
+
+        rpyc.connect(host, port=port).root.put(block_id, data, minions)
+
 
 if __name__ == "__main__":
-  if not os.path.isdir(DATA_DIR): os.mkdir(DATA_DIR)
-  t = ThreadedServer(MinionService, port = 8888)
-  t.start()
+    PORT = int(sys.argv[1])
+    DATA_DIR = sys.argv[2]
+
+    if not os.path.isdir(DATA_DIR):
+        os.mkdir(DATA_DIR)
+
+    logging.debug(f"starting minion on port: {PORT} dir: {DATA_DIR}")
+    t = ThreadedServer(Minion(), port=PORT)
+    t.start()
