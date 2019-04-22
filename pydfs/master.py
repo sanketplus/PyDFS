@@ -1,9 +1,8 @@
 import rpyc
 import uuid
-import threading 
 import math
 import random
-import ConfigParser
+import configparser
 import signal
 import pickle
 import sys
@@ -11,78 +10,66 @@ import os
 
 from rpyc.utils.server import ThreadedServer
 
-def int_handler(signal, frame):
-  pickle.dump((MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping),open('fs.img','wb'))
-  sys.exit(0)
-
-def set_conf():
-  conf=ConfigParser.ConfigParser()
-  conf.readfp(open('dfs.conf'))
-  MasterService.exposed_Master.block_size = int(conf.get('master','block_size'))
-  MasterService.exposed_Master.replication_factor = int(conf.get('master','replication_factor'))
-  minions = conf.get('master','minions').split(',')
-  for m in minions:
-    id,host,port=m.split(":")
-    MasterService.exposed_Master.minions[id]=(host,port)
-
-  if os.path.isfile('fs.img'):
-    MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping = pickle.load(open('fs.img','rb'))
+BLOCK_SIZE = 100
+REPLICATION_FACTOR = 2
+MINIONS = {"1": ("127.0.0.1", 8000),
+           "2": ("127.0.0.1", 9000),}
 
 class MasterService(rpyc.Service):
-  class exposed_Master():
-    file_table = {}
-    block_mapping = {}
-    minions = {}
+    """
+    file_block = {'file.txt': ["block1", "block2"]}
+    block_minion = {"block1": [1,3]}
+    minions = {"1": (127.0.0.1,8000), "3": (127.0.0.1,9000)}
+    """
 
-    block_size = 0
-    replication_factor = 0
+    file_block = {}
+    block_minion = {}
+    minions = MINIONS
 
-    def exposed_read(self,fname):
-      mapping = self.__class__.file_table[fname]
-      return mapping
+    block_size = BLOCK_SIZE
+    replication_factor = REPLICATION_FACTOR
 
-    def exposed_write(self,dest,size):
-      if self.exists(dest):
-        pass # ignoring for now, will delete it later
+    def exposed_read(self, file):
+        """
+        returns [{"block1": [(127.0.0.1,8000)]}, "block2": ...]
+        """
 
-      self.__class__.file_table[dest]=[]
+        mapping = []
+        # iterate over all of file's blocks
+        for blk in self.file_block[file]:
+            minion_addr = []
+            # get all minions that contain that block
+            for m_id in self.block_minion[blk]:
+                minion_addr.append(self.minions[m_id])
 
-      num_blocks = self.calc_num_blocks(size)
-      blocks = self.alloc_blocks(dest,num_blocks)
-      return blocks
+            mapping.append({"block_id": blk, "block_addr": minion_addr})
+        return mapping
 
-    def exposed_get_file_table_entry(self,fname):
-      if fname in self.__class__.file_table:
-        return self.__class__.file_table[fname]
-      else:
-        return None
+    def exposed_write(self, file, size):
 
-    def exposed_get_block_size(self):
-      return self.__class__.block_size
+        self.file_block[file] = []
 
-    def exposed_get_minions(self):
-      return self.__class__.minions
+        num_blocks = int(math.ceil(float(size) / self.block_size))
+        return self.alloc_blocks(file, num_blocks)
 
-    def calc_num_blocks(self,size):
-      return int(math.ceil(float(size)/self.__class__.block_size))
+    def alloc_blocks(self, file, num_blocks):
+        return_blocks = []
+        for i in range(0, num_blocks):
+            block_id = str(uuid.uuid1()) # generate a block
+            minion_ids = random.sample(     # allocate REPLICATION_FACTOR number of minions
+                list(self.minions.keys()), self.replication_factor)
+            minion_addr = [self.minions[m] for m in minion_ids]
+            self.block_minion[block_id] = minion_ids
+            self.file_block[file].append(block_id)
 
-    def exists(self,file):
-      return file in self.__class__.file_table
+            return_blocks.append(
+                {"block_id": block_id, "block_addr": minion_addr})
 
-    def alloc_blocks(self,dest,num):
-      blocks = []
-      for i in range(0,num):
-        block_uuid = uuid.uuid1()
-        nodes_ids = random.sample(self.__class__.minions.keys(),self.__class__.replication_factor)
-        blocks.append((block_uuid,nodes_ids))
-
-        self.__class__.file_table[dest].append((block_uuid,nodes_ids))
-
-      return blocks
+        return return_blocks
 
 
 if __name__ == "__main__":
-  set_conf()
-  signal.signal(signal.SIGINT,int_handler)
-  t = ThreadedServer(MasterService, port = 2131)
-  t.start()
+    t = ThreadedServer(MasterService(), port=2131, protocol_config={
+    'allow_public_attrs': True,
+})
+    t.start()
