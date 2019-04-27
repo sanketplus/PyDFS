@@ -30,9 +30,6 @@ class MasterService(rpyc.Service):
     replication_factor = REPLICATION_FACTOR
 
     def exposed_read(self, file):
-        """
-        returns [{"block1": [(127.0.0.1,8000)]}, "block2": ...]
-        """
 
         mapping = []
         # iterate over all of file's blocks
