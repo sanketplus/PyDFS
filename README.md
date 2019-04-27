@@ -1,28 +1,32 @@
 # PyDFS
-Simple (~200 lines) distributed file system like HDFS (and of-course GFS). It consists of one Master (NameNode) and multiple Minions (DataNode). And a client for interation. It will dump metadata/namespace when given SIGINT and reload it when fired up next time. Replicate data  the way HDFS does. It will send data to one minion and that minion will send it to next one and so on. Reading done in similar manner. Will contact first minion for block, if fails then second and so on.  Uses RPyC for RPC.
 
-#### [Blog: Simple Distributed File System in Python : PyDFS](https://superuser.blog/distributed-file-system-python/) 
-
-### Requirements:
-  - rpyc (Really! That's it.)
-  
-### How to run.
-  1. Edit `dfs.conf` for setting block size, replication factor and list minions (`minionid:host:port`)
-  2. Fire up master and minions.
-  3. To store and retrieve a file:
-```sh
-$ python client.py put sourcefile.txt sometxt
-$ python client.py get sometxt
+# Componenets:
+ 1. **Master :** Will contain metadata
+ 2. **Minion :** Will contain actual file data
+ 3. **Client :** Interacts with 1 and 2 to do stuff
+   
+## Master:
+Master will contain metadata. Which is: file name, blocks associated with it and address of those blocks. Data structures wise, it would look something like this.
 ```
-##### Stop it using Ctll + C so that it will dump the namespace.
+example file: /etc/passwd
 
-## TODO:
-  1. Implement Delete
-  2. Use better algo for minion selection to put a block (currently random)
-  3. Dump namespace periodically (maybe)
-  4. Minion heartbeats / Block reports
-  5. Add entry in namespace only after write succeeds.
-  6. Use proper datastructure(tree-like eg. treedict) to store
-     namespace(currently simple dict)
-  7. Logging
-  8. Expand this TODO
+    file_block = {"/etc/passwd": ["block0", "block1"]}
+    block_minion = {"block0": [minion1 ,minion2],
+                    "block1": [minion2, minion3]}
+    minions = {
+      "minion1": (host1, portX),
+      "minion2": (host2, portY),
+      "minion3": (host3, portZ)
+    }
+```
+
+Also master will have following properties:
+1. `replication_factor`: how many copies to make of a block
+2. `block_size`: what should be size of each block
+3. block placement strategy: random here
+
+## Minion:
+Minions are relatively simple in operations and implementation. Given a block address either they can read or write and forward same block to next minion.
+
+## Client:
+Client will interact with both minions and master. Given a get or put operation, it will first contact master to query metadata and then pertaining minions to perform data operation.
