@@ -3,14 +3,8 @@ import sys
 import os
 import logging
 
+
 logging.basicConfig(level=logging.DEBUG)
-
-
-def read_from_minion(block_uuid, minion):
-    host, port = minion
-    con = rpyc.connect(host, port=port)
-    minion = con.root
-    return minion.get(str(block_uuid))
 
 
 def get(master, file):
