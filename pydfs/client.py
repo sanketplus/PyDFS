@@ -15,11 +15,14 @@ def get(master, file):
 
     for block in file_table:
         for host, port in block['block_addr']:
-            con = rpyc.connect(host, port=port).root
-            data = con.get(block['block_id'])
-            if data:
-                sys.stdout.write(data)
-                break
+            try:
+                con = rpyc.connect(host, port=port).root
+                data = con.get(block['block_id'])
+                if data:
+                    sys.stdout.write(data)
+                    break
+            except Exception as e:
+                continue
         else:
             logging.error("No blocks found. Possibly a corrupt file")
 
